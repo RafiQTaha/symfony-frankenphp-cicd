@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CI/CD Symfony — Guide Interactif</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e1a; --bg2: #0f1525; --bg3: #151c30; --border: #1e2d4a;
+    --accent: #00d4ff; --accent2: #7c3aed; --green: #00ff88;
+    --amber: #ffb800; --red: #ff4444; --text: #e2e8f0; --text2: #8899aa;
+    --mono: 'JetBrains Mono', monospace; --sans: 'Syne', sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+  .container { max-width:1100px; margin:0 auto; padding:40px 24px; position:relative; z-index:1; }
+  header { text-align:center; margin-bottom:60px; }
+  .badge { display:inline-block; background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.3); color:var(--accent); font-family:var(--mono); font-size:11px; padding:4px 12px; border-radius:20px; letter-spacing:2px; margin-bottom:20px; }
+  h1 { font-size:clamp(28px,5vw,48px); font-weight:800; line-height:1.1; margin-bottom:16px; }
+  h1 span { color:var(--accent); }
+  .subtitle { color:var(--text2); font-size:15px; font-weight:400; font-family:var(--mono); }
+  .stack { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:24px; }
+  .pill { background:var(--bg3); border:1px solid var(--border); color:var(--text2); font-family:var(--mono); font-size:11px; padding:4px 10px; border-radius:4px; }
+  .pill.green { border-color:rgba(0,255,136,0.3); color:var(--green); background:rgba(0,255,136,0.05); }
+  .pill.blue { border-color:rgba(0,212,255,0.3); color:var(--accent); background:rgba(0,212,255,0.05); }
+  .pill.purple { border-color:rgba(124,58,237,0.4); color:#a78bfa; background:rgba(124,58,237,0.08); }
+  .progress-bar { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:16px 24px; margin-bottom:40px; display:flex; align-items:center; gap:16px; }
+  .progress-track { flex:1; height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent2),var(--accent)); border-radius:2px; transition:width 0.4s ease; }
+  .progress-text { font-family:var(--mono); font-size:12px; color:var(--accent); white-space:nowrap; }
+  .nav { display:flex; gap:4px; margin-bottom:32px; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:4px; overflow-x:auto; }
+  .nav-btn { flex:1; min-width:75px; padding:8px 10px; border:none; border-radius:7px; background:transparent; color:var(--text2); font-family:var(--mono); font-size:11px; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+  .nav-btn:hover { color:var(--text); background:var(--bg3); }
+  .nav-btn.active { background:var(--accent2); color:white; }
+  .nav-btn.done { color:var(--green); }
+  .nav-btn.done::before { content:'✓ '; }
+  .step { display:none; }
+  .step.active { display:block; }
+  .step-header { display:flex; align-items:flex-start; gap:20px; margin-bottom:32px; }
+  .step-num { width:48px; height:48px; min-width:48px; background:linear-gradient(135deg,var(--accent2),var(--accent)); border-radius:12px; display:flex; align-items:center; justify-content:center; font-family:var(--mono); font-size:18px; font-weight:700; }
+  .step-title { font-size:22px; font-weight:800; margin-bottom:6px; }
+  .step-desc { color:var(--text2); font-size:14px; font-weight:400; line-height:1.6; }
+  .section { background:var(--bg2); border:1px solid var(--border); border-radius:12px; margin-bottom:20px; overflow:hidden; }
+  .section-header { padding:14px 20px; display:flex; align-items:center; gap:10px; cursor:pointer; user-select:none; border-bottom:1px solid transparent; transition:background 0.2s; }
+  .section-header:hover { background:var(--bg3); }
+  .section-header.open { border-bottom-color:var(--border); }
+  .section-icon { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+  .icon-cmd { background:rgba(0,212,255,0.15); color:var(--accent); }
+  .icon-info { background:rgba(124,58,237,0.15); color:#a78bfa; }
+  .icon-warn { background:rgba(255,184,0,0.15); color:var(--amber); }
+  .icon-ok { background:rgba(0,255,136,0.15); color:var(--green); }
+  .section-title { font-size:13px; font-weight:600; flex:1; }
+  .section-arrow { color:var(--text2); font-size:11px; transition:transform 0.2s; }
+  .section-header.open .section-arrow { transform:rotate(180deg); }
+  .section-body { padding:20px; display:none; }
+  .section-body.open { display:block; }
+  .code-block { background:var(--bg); border:1px solid var(--border); border-radius:8px; overflow:hidden; margin:12px 0; }
+  .code-header { display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-bottom:1px solid var(--border); background:var(--bg3); }
+  .code-lang { font-family:var(--mono); font-size:10px; color:var(--text2); letter-spacing:1px; }
+  .copy-btn { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.2); color:var(--accent); font-family:var(--mono); font-size:10px; padding:3px 10px; border-radius:4px; cursor:pointer; transition:all 0.2s; }
+  .copy-btn:hover { background:rgba(0,212,255,0.2); }
+  .copy-btn.copied { color:var(--green); border-color:rgba(0,255,136,0.3); background:rgba(0,255,136,0.1); }
+  pre { padding:16px; overflow-x:auto; font-family:var(--mono); font-size:12px; line-height:1.7; color:var(--text); }
+  .c-cyan{color:var(--accent);} .c-green{color:var(--green);} .c-amber{color:var(--amber);} .c-purple{color:#a78bfa;} .c-gray{color:var(--text2);}
+  .info-box { border-radius:8px; padding:14px 16px; margin:12px 0; font-size:13px; line-height:1.6; font-family:var(--mono); }
+  .info-box.blue { background:rgba(0,212,255,0.07); border-left:3px solid var(--accent); color:#a0d4e8; }
+  .info-box.green { background:rgba(0,255,136,0.07); border-left:3px solid var(--green); color:#a0e8c4; }
+  .info-box.amber { background:rgba(255,184,0,0.07); border-left:3px solid var(--amber); color:#e8d4a0; }
+  .info-box.red { background:rgba(255,68,68,0.07); border-left:3px solid var(--red); color:#e8a0a0; }
+  .info-box strong { color:var(--text); }
+  table { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px; margin:12px 0; }
+  th { background:var(--bg3); color:var(--accent); padding:8px 12px; text-align:left; border-bottom:1px solid var(--border); font-weight:600; }
+  td { padding:8px 12px; border-bottom:1px solid var(--border); color:var(--text2); }
+  td:first-child { color:var(--text); }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--bg3); }
+  .td-green{color:var(--green)!important;} .td-red{color:var(--red)!important;} .td-amber{color:var(--amber)!important;}
+  .nav-actions { display:flex; justify-content:space-between; align-items:center; margin-top:40px; gap:12px; }
+  .btn { padding:10px 24px; border-radius:8px; font-family:var(--mono); font-size:13px; cursor:pointer; border:none; transition:all 0.2s; font-weight:600; }
+  .btn-prev { background:var(--bg3); border:1px solid var(--border); color:var(--text2); }
+  .btn-prev:hover { color:var(--text); border-color:var(--text2); }
+  .btn-next { background:linear-gradient(135deg,var(--accent2),var(--accent)); color:white; }
+  .btn-next:hover { opacity:0.9; transform:translateX(2px); }
+  .mark-done-btn { background:transparent; border:1px solid var(--border); color:var(--text2); font-family:var(--mono); font-size:11px; padding:6px 14px; border-radius:6px; cursor:pointer; transition:all 0.2s; }
+  .mark-done-btn:hover { border-color:var(--green); color:var(--green); }
+  .mark-done-btn.done { border-color:var(--green); color:var(--green); background:rgba(0,255,136,0.08); }
+  .pipeline { display:flex; align-items:center; margin:16px 0; overflow-x:auto; padding:4px 0; }
+  .pipe-step { background:var(--bg3); border:1px solid var(--border); border-radius:8px; padding:10px 14px; font-family:var(--mono); font-size:11px; text-align:center; min-width:110px; flex-shrink:0; }
+  .pipe-step .ps-title { color:var(--text); font-weight:700; margin-bottom:2px; }
+  .pipe-step .ps-sub { color:var(--text2); font-size:10px; }
+  .pipe-step.blue { border-color:rgba(0,212,255,0.4); background:rgba(0,212,255,0.06); }
+  .pipe-step.purple { border-color:rgba(124,58,237,0.4); background:rgba(124,58,237,0.06); }
+  .pipe-step.green { border-color:rgba(0,255,136,0.4); background:rgba(0,255,136,0.06); }
+  .pipe-step.amber { border-color:rgba(255,184,0,0.4); background:rgba(255,184,0,0.06); }
+  .pipe-arrow { color:var(--text2); font-size:16px; padding:0 6px; flex-shrink:0; }
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:var(--bg2); }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+  p { color:var(--text2); font-size:13px; line-height:1.7; margin-bottom:10px; font-family:var(--mono); }
+  ul { color:var(--text2); font-size:13px; line-height:1.8; margin:8px 0 8px 18px; font-family:var(--mono); }
+
+  /* Pipeline annotator */
+  .pa-wrap { border:1px solid var(--border); border-radius:12px; overflow:hidden; margin:16px 0; }
+  .pa-header { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg3); border-bottom:1px solid var(--border); }
+  .pa-header-title { font-family:var(--mono); font-size:11px; color:var(--text2); }
+  .pa-legend { display:flex; gap:16px; }
+  .pa-leg { display:flex; align-items:center; gap:5px; font-family:var(--mono); font-size:10px; }
+  .pa-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+  .pa-grid { display:grid; grid-template-columns:1fr 1fr; }
+  .pa-left { background:var(--bg); border-right:1px solid var(--border); overflow:auto; max-height:580px; }
+  .pa-right { background:var(--bg2); overflow:auto; max-height:580px; }
+  .pa-line { display:block; padding:1px 16px; cursor:default; border-left:3px solid transparent; font-family:var(--mono); font-size:11.5px; line-height:1.9; white-space:pre; color:var(--text); transition:background 0.15s; }
+  .pa-line.clickable { cursor:pointer; }
+  .pa-line.clickable:hover { background:rgba(255,255,255,0.03); }
+  .pa-line.selected { background:rgba(0,212,255,0.08); }
+  .pa-line.t-obl { border-left-color:var(--green); }
+  .pa-line.t-imp { border-left-color:var(--amber); }
+  .pa-line.t-opt { border-left-color:var(--text2); }
+  .pa-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; padding:40px 24px; text-align:center; color:var(--text2); font-family:var(--mono); font-size:12px; gap:10px; min-height:200px; }
+  .pa-detail { padding:20px; }
+  .pa-code-line { font-family:var(--mono); font-size:11px; background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:14px; color:var(--accent); word-break:break-all; }
+  .pa-badge { display:inline-block; font-family:var(--mono); font-size:10px; padding:3px 10px; border-radius:20px; margin-bottom:12px; font-weight:700; letter-spacing:1px; }
+  .pa-badge.obl { background:rgba(0,255,136,0.15); color:var(--green); border:1px solid rgba(0,255,136,0.3); }
+  .pa-badge.imp { background:rgba(255,184,0,0.15); color:var(--amber); border:1px solid rgba(255,184,0,0.3); }
+  .pa-badge.opt { background:rgba(136,153,170,0.15); color:var(--text2); border:1px solid var(--border); }
+  .pa-title { font-size:15px; font-weight:700; color:var(--text); margin-bottom:10px; }
+  .pa-desc { font-family:var(--mono); font-size:12px; color:var(--text2); line-height:1.7; margin-bottom:14px; }
+  .pa-tip { background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:10px 12px; font-family:var(--mono); font-size:11px; color:var(--text2); line-height:1.6; }
+  .pa-tip strong { color:var(--accent); }
+  @media(max-width:680px){ .pa-grid{grid-template-columns:1fr;} .pa-left{border-right:none;border-bottom:1px solid var(--border);max-height:260px;} }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="badge">GUIDE INTERACTIF</div>
+  <h1>Symfony CI/CD<br><span>FrankenPHP + GitHub Actions</span></h1>
+  <p class="subtitle">WSL2 · Docker · Self-hosted Runner · Auto-deploy</p>
+  <div class="stack">
+    <span class="pill blue">Symfony 7</span>
+    <span class="pill blue">FrankenPHP 8.3</span>
+    <span class="pill green">MySQL 8.0</span>
+    <span class="pill green">Docker Compose</span>
+    <span class="pill purple">GitHub Actions</span>
+    <span class="pill purple">Self-hosted Runner</span>
+    <span class="pill">PHPUnit 12</span>
+    <span class="pill">Doctrine ORM</span>
+    <span class="pill">Asset Mapper</span>
+  </div>
+</header>
+
+<div class="progress-bar">
+  <span style="font-family:var(--mono);font-size:12px;color:var(--text2)">Progression</span>
+  <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:9%"></div></div>
+  <span class="progress-text" id="progressText">1 / 11</span>
+</div>
+
+<div class="nav" id="navBar"></div>
+
+<!-- STEP 1 -->
+<div class="step active" data-step="0">
+  <div class="step-header">
+    <div class="step-num">1</div>
+    <div><div class="step-title">Environnement & Structure</div><div class="step-desc">Vérification de l'environnement WSL2 et création de la structure des dossiers.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Vérification</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre><span class="c-cyan">docker</span> --version && <span class="c-cyan">docker</span> ps
+<span class="c-cyan">git</span> --version
+<span class="c-cyan">git</span> config user.name && <span class="c-cyan">git</span> config user.email</pre>
+      </div>
+      <div class="info-box blue"><strong>Note :</strong> PHP et Composer ne sont PAS installés sur l'hôte WSL2 — ils tournent dans le container FrankenPHP.</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Création de la structure</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre>mkdir -p ~/cicd/appDev
+mkdir -p ~/cicd/appProd
+<span class="c-cyan">ls</span> ~/cicd/</pre>
+      </div>
+      <div class="info-box amber"><strong>Architecture :</strong> appDev = poste dev. appProd = serveur prod simulé. Séparés complètement — GitHub Actions déploie de l'un vers l'autre.</div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 2 -->
+<div class="step" data-step="1">
+  <div class="step-header">
+    <div class="step-num">2</div>
+    <div><div class="step-title">Dockerfile FrankenPHP</div><div class="step-desc">Image Docker basée sur FrankenPHP avec les extensions PHP nécessaires pour Symfony.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-info">i</div><div class="section-title">Pourquoi FrankenPHP ?</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <table>
+        <tr><th>Classique</th><th>FrankenPHP</th></tr>
+        <tr><td>nginx + php-fpm + config</td><td class="td-green">Une seule image</td></tr>
+        <tr><td>3 processus à gérer</td><td class="td-green">1 processus</td></tr>
+        <tr><td>HTTP/1.1, HTTP/2</td><td class="td-green">HTTP/1.1, HTTP/2, HTTP/3</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Dockerfile</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">DOCKERFILE</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre><span class="c-purple">FROM</span> dunglas/frankenphp:latest-php8.3
+<span class="c-purple">RUN</span> install-php-extensions intl opcache pdo_mysql zip apcu
+<span class="c-purple">COPY</span> --from=composer:2 /usr/bin/composer /usr/bin/composer
+<span class="c-purple">WORKDIR</span> /app
+<span class="c-purple">ENV</span> APP_ENV=dev
+<span class="c-purple">ENV</span> APP_DEBUG=1
+<span class="c-purple">ENV</span> SERVER_NAME=<span class="c-green">":80"</span></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 3 -->
+<div class="step" data-step="2">
+  <div class="step-header">
+    <div class="step-num">3</div>
+    <div><div class="step-title">Docker Compose & Variables d'environnement</div><div class="step-desc">Séparation des secrets Docker et Symfony — jamais de credentials dans le code commité.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-warn">!</div><div class="section-title">Séparation des secrets</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <table>
+        <tr><th>Fichier</th><th>Commité</th><th>Rôle</th></tr>
+        <tr><td>.env.compose</td><td class="td-red">NON</td><td>Credentials MySQL pour Docker</td></tr>
+        <tr><td>symfony/.env</td><td class="td-green">OUI</td><td>Template — variables sans valeurs</td></tr>
+        <tr><td>symfony/.env.local</td><td class="td-red">NON</td><td>Vraies valeurs Symfony</td></tr>
+      </table>
+      <div class="info-box red"><strong>Règle absolue :</strong> Aucun mot de passe dans un fichier commité sur GitHub.</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Commandes</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre><span class="c-cyan">openssl</span> rand -hex 32  <span class="c-gray"># générer APP_SECRET</span>
+cd ~/cicd/appDev
+<span class="c-cyan">docker</span> compose --env-file .env.compose up -d --build
+<span class="c-cyan">curl</span> -k http://localhost:8080</pre>
+      </div>
+      <div class="info-box blue"><strong>Hiérarchie Symfony :</strong> .env → .env.dev → .env.local (gagne toujours).</div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 4 -->
+<div class="step" data-step="3">
+  <div class="step-header">
+    <div class="step-num">4</div>
+    <div><div class="step-title">Projet Symfony — Installation</div><div class="step-desc">Symfony 7 avec Doctrine ORM, PHPUnit et Asset Mapper — tout via Docker.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Installation complète</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre><span class="c-cyan">docker</span> run --rm -v $(pwd)/symfony:/app composer:2 create-project symfony/skeleton /app "7.*"
+<span class="c-cyan">sudo</span> chown -R $USER:$USER ~/cicd/appDev/symfony/
+<span class="c-cyan">docker</span> exec appdev-php-1 composer require symfony/orm-pack
+<span class="c-cyan">docker</span> exec appdev-php-1 composer require --dev symfony/test-pack
+<span class="c-cyan">docker</span> exec appdev-php-1 composer require symfony/asset-mapper symfony/asset
+<span class="c-cyan">docker</span> exec appdev-php-1 composer require --dev symfony/maker-bundle
+<span class="c-cyan">docker</span> exec -it appdev-php-1 php bin/console make:entity Article
+<span class="c-cyan">docker</span> exec appdev-php-1 php bin/console make:migration
+<span class="c-cyan">docker</span> exec appdev-php-1 php bin/console doctrine:migrations:migrate --no-interaction
+<span class="c-cyan">docker</span> exec appdev-php-1 php vendor/bin/phpunit</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 5 -->
+<div class="step" data-step="4">
+  <div class="step-header">
+    <div class="step-num">5</div>
+    <div><div class="step-title">GitHub — Repo & Secrets</div><div class="step-desc">Initialisation Git, création du repo et configuration des secrets CI/CD.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Init Git + Repo GitHub</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre><span class="c-cyan">sudo</span> apt install gh -y && <span class="c-cyan">gh</span> auth login
+cd ~/cicd/appDev && <span class="c-cyan">git</span> init && <span class="c-cyan">git</span> add .
+<span class="c-cyan">git</span> status  <span class="c-gray"># vérifier que .env.local absent !</span>
+<span class="c-cyan">gh</span> repo create symfony-frankenphp-cicd --private \
+  --description <span class="c-amber">"Symfony 7 + FrankenPHP + GitHub Actions CI/CD"</span> \
+  --source=. --remote=origin --push
+<span class="c-cyan">gh</span> secret set DEPLOY_PATH --body <span class="c-amber">"/home/taha/cicd/appProd"</span>
+<span class="c-cyan">gh</span> secret list</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 6 -->
+<div class="step" data-step="5">
+  <div class="step-header">
+    <div class="step-num">6</div>
+    <div><div class="step-title">Environnement Production</div><div class="step-desc">Configuration appProd — simule un serveur de production distant avec sa propre config.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-info">i</div><div class="section-title">Dev vs Prod</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <table>
+        <tr><th>Config</th><th>Dev</th><th>Prod</th></tr>
+        <tr><td>APP_ENV</td><td class="td-amber">dev</td><td class="td-green">prod</td></tr>
+        <tr><td>APP_DEBUG</td><td class="td-amber">1</td><td class="td-green">0</td></tr>
+        <tr><td>Port HTTP</td><td>8080</td><td>9080</td></tr>
+        <tr><td>Port MySQL</td><td>3306</td><td>3307</td></tr>
+        <tr><td>composer install</td><td>avec --dev</td><td class="td-green">--no-dev --optimize</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Setup appProd</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre>cd ~/cicd/appProd
+<span class="c-cyan">git</span> clone https://github.com/TON_USER/symfony-frankenphp-cicd.git .
+<span class="c-gray"># Créer .env.compose et symfony/.env.local avec les vraies valeurs prod</span>
+<span class="c-cyan">docker</span> compose -f docker-compose.prod.yml --env-file .env.compose up -d --build
+<span class="c-cyan">docker</span> exec appprod-php-1 composer install --no-dev --optimize-autoloader
+<span class="c-cyan">docker</span> exec appprod-php-1 php bin/console doctrine:migrations:migrate --no-interaction</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 7 -->
+<div class="step" data-step="6">
+  <div class="step-header">
+    <div class="step-num">7</div>
+    <div><div class="step-title">Self-hosted Runner</div><div class="step-desc">Installation du runner GitHub Actions sur WSL2 comme service systemd — démarrage automatique.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-info">i</div><div class="section-title">Concept du self-hosted runner</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <div class="pipeline">
+        <div class="pipe-step blue"><div class="ps-title">git push</div><div class="ps-sub">ton PC</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step purple"><div class="ps-title">GitHub</div><div class="ps-sub">détecte le push</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step amber"><div class="ps-title">Runner</div><div class="ps-sub">écoute en permanence</div></div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-step green"><div class="ps-title">Deploy</div><div class="ps-sub">appProd local</div></div>
+      </div>
+      <div class="info-box blue"><strong>Connexion sortante uniquement :</strong> Le runner contacte GitHub — pas besoin d'IP publique ni d'ouvrir des ports.</div>
+      <table>
+        <tr><th></th><th>ubuntu-latest</th><th>self-hosted</th></tr>
+        <tr><td>Tourne sur</td><td>Serveur GitHub</td><td class="td-green">Ta machine WSL2</td></tr>
+        <tr><td>Accès à appProd</td><td class="td-red">NON</td><td class="td-green">OUI direct</td></tr>
+        <tr><td>Utilisation</td><td>Tests neutres</td><td>Deploy local</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Installation + systemd</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre><span class="c-cyan">gh</span> api repos/TON_USER/symfony-frankenphp-cicd/actions/runners/registration-token \
+  --method POST --jq <span class="c-amber">'.token'</span>
+mkdir -p ~/cicd/actions-runner && cd ~/cicd/actions-runner
+<span class="c-cyan">curl</span> -o runner.tar.gz -L https://github.com/actions/runner/releases/download/v2.322.0/actions-runner-linux-x64-2.322.0.tar.gz
+<span class="c-cyan">tar</span> xzf runner.tar.gz
+./config.sh --url https://github.com/TON_USER/symfony-frankenphp-cicd --token TON_TOKEN
+<span class="c-cyan">sudo</span> ./svc.sh install && <span class="c-cyan">sudo</span> ./svc.sh start && <span class="c-cyan">sudo</span> ./svc.sh status</pre>
+      </div>
+      <div class="info-box green"><strong>systemd</strong> = démarrage automatique avec WSL2. Plus besoin de ./run.sh manuellement.</div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 8 — Pipeline annoté interactif -->
+<div class="step" data-step="7">
+  <div class="step-header">
+    <div class="step-num">8</div>
+    <div><div class="step-title">Pipeline — Explication ligne par ligne</div><div class="step-desc">Clique sur n'importe quelle ligne du pipeline pour voir son explication détaillée, son niveau d'importance, et si elle peut être supprimée.</div></div>
+  </div>
+
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-info">i</div><div class="section-title">Pipeline interactif annoté — clique une ligne</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <div class="pa-wrap">
+        <div class="pa-header">
+          <span class="pa-header-title">.github/workflows/ci-cd.yml</span>
+          <div class="pa-legend">
+            <div class="pa-leg"><div class="pa-dot" style="background:var(--green)"></div><span style="color:var(--green);font-family:var(--mono);font-size:10px">OBLIGATOIRE</span></div>
+            <div class="pa-leg"><div class="pa-dot" style="background:var(--amber)"></div><span style="color:var(--amber);font-family:var(--mono);font-size:10px">IMPORTANT</span></div>
+            <div class="pa-leg"><div class="pa-dot" style="background:var(--text2)"></div><span style="color:var(--text2);font-family:var(--mono);font-size:10px">OPTIONNEL</span></div>
+          </div>
+        </div>
+        <div class="pa-grid">
+          <div class="pa-left" id="paCode"></div>
+          <div class="pa-right" id="paPanel">
+            <div class="pa-empty">
+              <div style="font-size:24px;opacity:0.3">←</div>
+              <div>Clique sur une ligne colorée pour voir son explication</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-icon icon-warn">!</div><div class="section-title">Pas de tests unitaires — que mettre à la place ?</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body">
+      <p>Ne jamais supprimer le job de vérification — remplace PHPUnit par une autre vérification :</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">YAML — alternatives à PHPUnit</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre><span class="c-gray"># Minimum absolu — vérification syntaxe PHP</span>
+- name: Syntaxe PHP
+  run: cd symfony && find src/ -name "*.php" -exec php -l {} \;
+
+<span class="c-gray"># PHPStan — détecte les bugs sans écrire de tests</span>
+- name: PHPStan
+  run: cd symfony && vendor/bin/phpstan analyse src/ --level=5
+
+<span class="c-gray"># PHP CS Fixer — style de code</span>
+- name: Code style
+  run: cd symfony && vendor/bin/php-cs-fixer fix --dry-run --diff
+
+<span class="c-gray"># Audit sécurité des dépendances</span>
+- name: Security audit
+  run: cd symfony && composer audit</pre>
+      </div>
+      <div class="info-box amber"><strong>Recommandation :</strong> Même sans PHPUnit, ajoute au minimum <code>composer audit</code> + vérification syntaxe. Déployer sans aucune vérification = risque élevé.</div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 9 -->
+<div class="step" data-step="8">
+  <div class="step-header">
+    <div class="step-num">9</div>
+    <div><div class="step-title">Sécurité & Repo Public</div><div class="step-desc">Protection de la branche master, passage en public et bonnes pratiques de sécurité.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Protection branche + repo public</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre><span class="c-cyan">gh</span> api repos/TON_USER/symfony-frankenphp-cicd --method PATCH --field private=false
+<span class="c-cyan">gh</span> api repos/TON_USER/symfony-frankenphp-cicd/branches/master/protection \
+  --method PUT \
+  --field required_pull_request_reviews=null \
+  --field enforce_admins=false \
+  --field restrictions=null \
+  --field required_status_checks=null</pre>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-icon icon-ok">✓</div><div class="section-title">Checklist sécurité</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body">
+      <table>
+        <tr><th>Point</th><th>Statut</th></tr>
+        <tr><td>.env.local jamais commité</td><td class="td-green">✓ dans .gitignore</td></tr>
+        <tr><td>.env.compose jamais commité</td><td class="td-green">✓ dans .gitignore</td></tr>
+        <tr><td>APP_SECRET différent dev/prod</td><td class="td-green">✓ openssl rand</td></tr>
+        <tr><td>APP_DEBUG=0 en prod</td><td class="td-green">✓ .env.local prod</td></tr>
+        <tr><td>composer --no-dev en prod</td><td class="td-green">✓ pipeline</td></tr>
+        <tr><td>Deploy protégé contre PR externes</td><td class="td-green">✓ if: event == push</td></tr>
+        <tr><td>Branche master protégée</td><td class="td-green">✓ branch protection</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 10 -->
+<div class="step" data-step="9">
+  <div class="step-header">
+    <div class="step-num">10</div>
+    <div><div class="step-title">Commandes utiles & Monitoring</div><div class="step-desc">Toutes les commandes du quotidien pour monitorer, déboguer et gérer le pipeline.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Monitoring pipeline</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre><span class="c-cyan">gh</span> run list --limit 5        <span class="c-gray"># derniers runs</span>
+<span class="c-cyan">gh</span> run watch                 <span class="c-gray"># temps réel</span>
+<span class="c-cyan">gh</span> run view --log-failed     <span class="c-gray"># logs d'erreur</span>
+<span class="c-cyan">sudo</span> ./svc.sh status         <span class="c-gray"># status runner</span>
+<span class="c-cyan">sudo</span> ./svc.sh restart        <span class="c-gray"># redémarrer runner</span></pre>
+      </div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-header" onclick="toggleSection(this)">
+      <div class="section-icon icon-cmd">$</div><div class="section-title">Docker quotidien</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body">
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">BASH</span><button class="copy-btn" onclick="copyCode(this)">copier</button></div>
+        <pre><span class="c-cyan">docker</span> compose ps
+<span class="c-cyan">docker</span> compose logs -f php
+<span class="c-cyan">docker</span> exec appdev-php-1 php vendor/bin/phpunit --testdox
+<span class="c-cyan">docker</span> exec appdev-php-1 php bin/console make:migration
+<span class="c-cyan">docker</span> exec appdev-php-1 php bin/console doctrine:migrations:migrate --no-interaction</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 11 -->
+<div class="step" data-step="10">
+  <div class="step-header">
+    <div class="step-num">11</div>
+    <div><div class="step-title">Récapitulatif final</div><div class="step-desc">Stack complète et architecture finale du projet.</div></div>
+  </div>
+  <div class="section">
+    <div class="section-header open" onclick="toggleSection(this)">
+      <div class="section-icon icon-ok">✓</div><div class="section-title">Stack complète</div><div class="section-arrow">▼</div>
+    </div>
+    <div class="section-body open">
+      <table>
+        <tr><th>Composant</th><th>Technologie</th><th>Status</th></tr>
+        <tr><td>Runtime PHP</td><td>FrankenPHP 8.3</td><td class="td-green">✓</td></tr>
+        <tr><td>Framework</td><td>Symfony 7</td><td class="td-green">✓</td></tr>
+        <tr><td>Base de données</td><td>MySQL 8.0</td><td class="td-green">✓</td></tr>
+        <tr><td>ORM</td><td>Doctrine + Migrations</td><td class="td-green">✓</td></tr>
+        <tr><td>Assets</td><td>Asset Mapper</td><td class="td-green">✓</td></tr>
+        <tr><td>Tests</td><td>PHPUnit 12</td><td class="td-green">✓</td></tr>
+        <tr><td>CI — Tests</td><td>GitHub Actions ubuntu-latest</td><td class="td-green">✓</td></tr>
+        <tr><td>CD — Deploy</td><td>Self-hosted runner systemd</td><td class="td-green">✓</td></tr>
+        <tr><td>Rollback</td><td>git reset --hard</td><td class="td-green">✓</td></tr>
+        <tr><td>Sécurité</td><td>Branch protection + secrets</td><td class="td-green">✓</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="nav-actions">
+  <button class="btn btn-prev" id="btnPrev" onclick="navigate(-1)">← Précédent</button>
+  <button class="mark-done-btn" id="btnDone" onclick="markDone()">Marquer comme fait</button>
+  <button class="btn btn-next" id="btnNext" onclick="navigate(1)">Suivant →</button>
+</div>
+
+</div>
+
+<script>
+const steps = ["Env","Dockerfile","Docker Compose","Symfony","GitHub","Prod","Runner","Pipeline","Sécurité","Monitoring","Récap"];
+let current = 0;
+const done = new Set();
+
+const pLines = [
+  {t:"name: CI/CD Symfony",                                                   type:"opt", title:"Nom du workflow",            desc:"Nom affiché sur GitHub Actions. Aucun impact technique — change-le librement.", tip:"Convention : 'CI/CD NomProjet' ou 'Build & Deploy'."},
+  {t:"",type:null},
+  {t:"on:",                                                                    type:"obl", title:"Déclencheurs",               desc:"Définit QUAND le pipeline se déclenche. C'est le point d'entrée — sans ça, rien ne s'exécute.", tip:"Tu peux aussi ajouter : schedule (cron), workflow_dispatch (manuel), release (sur tag)."},
+  {t:"  push:",                                                                type:"obl", title:"Déclencheur push",           desc:"Le pipeline se déclenche sur chaque git push. C'est le déclencheur principal du CI/CD.", tip:null},
+  {t:"    branches: [master]",                                                 type:"imp", title:"Filtre par branche",         desc:"Limite le déclenchement à master uniquement. Sans ce filtre, chaque push sur n'importe quelle branche déclencherait le pipeline.", tip:"En multi-équipe, tu ajouterais aussi 'develop' pour un deploy staging."},
+  {t:"  pull_request:",                                                        type:"opt", title:"Déclencheur Pull Request",   desc:"Déclenche les TESTS (pas le deploy) sur les PR. Utile pour vérifier le code d'un collaborateur avant de merger.", tip:"Sur un projet solo sans collaborateurs, tu peux supprimer ce bloc entièrement."},
+  {t:"    branches: [master]",                                                 type:"opt", title:"Filtre PR",                  desc:"Limite la vérification aux PR ciblant master.", tip:null},
+  {t:"",type:null},
+  {t:"jobs:",                                                                  type:"obl", title:"Déclaration des jobs",       desc:"Un pipeline contient un ou plusieurs jobs. Chaque job est une unité d'exécution indépendante — ils peuvent tourner en parallèle ou en séquence.", tip:null},
+  {t:"  tests:",                                                               type:"obl", title:"Identifiant du job",         desc:"Nom technique du job — utilisé pour les références entre jobs (needs:). Choisis un nom explicite.", tip:null},
+  {t:"    name: Tests PHPUnit",                                                type:"opt", title:"Nom affiché",                desc:"Nom lisible affiché dans l'interface GitHub. Optionnel — si absent, GitHub utilise l'identifiant du job.", tip:null},
+  {t:"    runs-on: ubuntu-latest",                                             type:"obl", title:"Environnement d'exécution",  desc:"'ubuntu-latest' = serveur GitHub dans le cloud. Environnement neutre, propre, gratuit. Toujours utiliser ubuntu-latest pour les tests.", tip:"Autres options : windows-latest, macos-latest. Plus chers en minutes GitHub Actions."},
+  {t:"",type:null},
+  {t:"    steps:",                                                             type:"obl", title:"Liste des étapes",           desc:"Un job est composé d'étapes exécutées séquentiellement. Si une étape échoue, les suivantes sont annulées.", tip:null},
+  {t:"      - name: Checkout code",                                            type:"opt", title:"Nom de l'étape",            desc:"Nom descriptif affiché dans les logs GitHub. Toujours nommer ses étapes pour faciliter le débogage.", tip:null},
+  {t:"        uses: actions/checkout@v4",                                      type:"obl", title:"Checkout du code",          desc:"OBLIGATOIRE. Télécharge le code depuis GitHub sur le serveur. Sans cette étape, le serveur n'a aucun fichier — impossible de tester.", tip:"Toujours @v4 (stable). Ne jamais utiliser @main (instable)."},
+  {t:"",type:null},
+  {t:"      - name: Setup PHP",                                                type:"opt", title:"Nom de l'étape",            desc:"Nom descriptif.", tip:null},
+  {t:"        uses: shivammathur/setup-php@v2",                                type:"obl", title:"Action setup-php",          desc:"Installe PHP sur le serveur GitHub. Action officielle de la communauté, millions de téléchargements, très fiable.", tip:null},
+  {t:"        with:",                                                          type:"obl", title:"Paramètres",                desc:"Bloc de configuration passé à l'action setup-php.", tip:null},
+  {t:"          php-version: '8.3'",                                           type:"obl", title:"Version PHP",               desc:"Doit correspondre à la version dans ton Dockerfile. Si différent, les tests passent en CI mais peuvent planter en prod.", tip:"Définir la version exacte, pas 'latest' — évite les surprises lors des mises à jour PHP."},
+  {t:"          extensions: intl, pdo_mysql, zip, apcu",                       type:"imp", title:"Extensions PHP",            desc:"Doivent correspondre à celles dans ton Dockerfile. Si une extension manque ici mais est présente en prod, les tests ne détectent pas les problèmes.", tip:"Vérifie toujours : extensions CI = extensions Dockerfile."},
+  {t:"          coverage: none",                                               type:"opt", title:"Couverture de code",        desc:"Désactive la génération de rapport de couverture. Plus rapide. Si tu veux Codecov, change en 'xdebug' ou 'pcov'.", tip:"coverage: none = builds ~30% plus rapides. Active seulement si tu as un outil de couverture."},
+  {t:"",type:null},
+  {t:"      - name: Install dependencies",                                     type:"opt", title:"Nom de l'étape",            desc:"Nom descriptif.", tip:null},
+  {t:"        run: cd symfony && composer install --no-interaction --prefer-dist", type:"obl", title:"composer install",     desc:"Installe vendor/. --no-interaction = aucune question interactive. --prefer-dist = archives zip au lieu de git clone (plus rapide en CI).", tip:"Ne jamais faire composer update en CI — utilise toujours install avec le composer.lock."},
+  {t:"",type:null},
+  {t:"      - name: Run PHPUnit",                                              type:"opt", title:"Nom de l'étape",            desc:"Nom descriptif.", tip:null},
+  {t:"        run: cd symfony && php vendor/bin/phpunit",                      type:"obl", title:"Lancement des tests",      desc:"Lance PHPUnit. Si un test échoue → exit code non-zéro → job échoue → deploy bloqué automatiquement grâce à 'needs: tests'.", tip:"Si pas de tests : remplace par 'find src/ -name \"*.php\" -exec php -l {} \\;' minimum."},
+  {t:"",type:null},
+  {t:"  deploy:",                                                              type:"obl", title:"Job Deploy",               desc:"Second job — responsable du déploiement en production. Séparé du job tests pour pouvoir le conditionner.", tip:null},
+  {t:"    name: Deploy Production",                                            type:"opt", title:"Nom affiché",              desc:"Nom lisible du job dans l'interface GitHub.", tip:null},
+  {t:"    runs-on: self-hosted",                                               type:"obl", title:"Self-hosted runner",       desc:"Ce job tourne sur TON runner installé sur WSL2. Il a accès direct à appProd — c'est pourquoi le deploy fonctionne sans IP publique.", tip:"En production réelle sur VPS : le runner est installé sur le serveur prod. Même principe."},
+  {t:"    needs: tests",                                                       type:"obl", title:"Dépendance entre jobs",    desc:"CRUCIAL. Le deploy ne démarre QUE si le job 'tests' a réussi. Sans cette ligne, tests et deploy tournent en parallèle — tu déploierais du code cassé.", tip:"Tu peux chaîner : needs: [tests, security, lint] pour bloquer sur plusieurs jobs."},
+  {t:"    if: github.ref == 'refs/heads/master' && github.event_name == 'push'", type:"imp", title:"Condition de sécurité", desc:"Double protection : 1) seulement sur master, 2) seulement sur push direct (jamais sur PR). Empêche un collaborateur externe de déclencher le deploy sur ton serveur via une PR.", tip:"Sur projet solo, tu peux simplifier à : if: github.ref == 'refs/heads/master'"},
+  {t:"",type:null},
+  {t:"    steps:",                                                             type:"obl", title:"Étapes du deploy",         desc:"Étapes exécutées sur le self-hosted runner (ta machine WSL2).", tip:null},
+  {t:"      - name: Deploy to production",                                    type:"opt", title:"Nom de l'étape",           desc:"Nom descriptif.", tip:null},
+  {t:"        run: |",                                                         type:"obl", title:"Script multi-lignes",      desc:"Le | indique un bloc de texte multi-lignes en YAML. Tout ce qui suit avec une indentation supérieure fait partie du script.", tip:null},
+  {t:"          cd ${{ secrets.DEPLOY_PATH }}",                               type:"obl", title:"Chemin de déploiement",    desc:"Se place dans le dossier appProd. ${{ secrets.DEPLOY_PATH }} lit depuis GitHub Secrets — jamais écrit en dur dans le pipeline.", tip:"secrets.* sont chiffrés par GitHub et masqués dans les logs (remplacés par ***."},
+  {t:"          PREVIOUS_COMMIT=$(git rev-parse HEAD)",                        type:"imp", title:"Point de rollback",        desc:"Sauvegarde le hash du commit actuellement en prod AVANT le git pull. Utilisé pour revenir en arrière si le deploy échoue.", tip:"git rev-parse HEAD retourne le hash complet du dernier commit."},
+  {t:"          git pull origin master",                                       type:"obl", title:"Récupération du code",     desc:"Télécharge le nouveau code de GitHub vers appProd. C'est l'action centrale du deploy.", tip:"En production haute disponibilité, on utilise des images Docker taguées pour un deploy atomique."},
+  {t:"          if ! docker compose ... composer install; then",               type:"imp", title:"composer install + rollback","desc":"Installe les nouvelles dépendances. Le 'if !' vérifie l'échec : si composer plante, on rollback automatiquement.", tip:"--no-dev = pas PHPUnit en prod. --optimize-autoloader = classmap optimisée, ~20% plus rapide."},
+  {t:"            git reset --hard $PREVIOUS_COMMIT",                          type:"imp", title:"Rollback Git",             desc:"En cas d'échec, remet appProd exactement au code qui fonctionnait. Les utilisateurs ne voient aucune interruption.", tip:"git reset --hard = annule tous les changements et revient au commit spécifié."},
+  {t:"          if ! docker compose ... migrations; then",                     type:"opt", title:"Migrations + rollback",    desc:"Applique les migrations Doctrine. OBLIGATOIRE si ton projet utilise Doctrine. Si pas de DB, supprime ce bloc.", tip:"Attention : les migrations Doctrine ne sont pas toujours réversibles. Teste en staging d'abord."},
+  {t:"          if ! docker compose ... cache:warmup; then",                   type:"opt", title:"Cache warmup",             desc:"Pré-génère le cache Symfony en prod. Améliore les performances de la première requête. Recommandé si APP_ENV=prod.", tip:"Sans warmup, le cache est généré à la demande — les premières requêtes seront lentes."},
+  {t:"          echo \"Deploy termine avec succes !\"",                        type:"opt", title:"Message de confirmation",  desc:"Message affiché dans les logs GitHub Actions. Purement informatif.", tip:"Tu peux remplacer par une notification : curl vers Slack, webhook, email, etc."},
+];
+
+function buildPipeline() {
+  const container = document.getElementById('paCode');
+  pLines.forEach((line, i) => {
+    const span = document.createElement('span');
+    let cls = 'pa-line';
+    if (line.type) { cls += ' clickable t-' + line.type; span.onclick = () => showDetail(i); }
+    span.className = cls;
+    span.dataset.idx = i;
+    span.textContent = (line.t || ' ');
+    container.appendChild(span);
+    container.appendChild(document.createTextNode('\n'));
+  });
+}
+
+function showDetail(idx) {
+  document.querySelectorAll('.pa-line').forEach(l => l.classList.remove('selected'));
+  const el = document.querySelector(`.pa-line[data-idx="${idx}"]`);
+  if (el) el.classList.add('selected');
+  const line = pLines[idx];
+  if (!line.type) return;
+  const bMap = { obl:['OBLIGATOIRE','obl'], imp:['IMPORTANT','imp'], opt:['OPTIONNEL / DÉPEND DU PROJET','opt'] };
+  const [label, cls] = bMap[line.type];
+  document.getElementById('paPanel').innerHTML = `
+    <div class="pa-detail">
+      <div class="pa-code-line">${line.t}</div>
+      <span class="pa-badge ${cls}">${label}</span>
+      <div class="pa-title">${line.title}</div>
+      <div class="pa-desc">${line.desc}</div>
+      ${line.tip ? `<div class="pa-tip"><strong>Conseil :</strong> ${line.tip}</div>` : ''}
+    </div>`;
+}
+
+function init() {
+  const nav = document.getElementById('navBar');
+  steps.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'nav-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = s;
+    btn.onclick = () => goTo(i);
+    btn.id = 'navBtn' + i;
+    nav.appendChild(btn);
+  });
+  buildPipeline();
+  updateUI();
+}
+
+function goTo(idx) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.step')[idx].classList.add('active');
+  document.getElementById('navBtn' + idx).classList.add('active');
+  current = idx;
+  updateUI();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function navigate(dir) {
+  const next = current + dir;
+  if (next >= 0 && next < steps.length) goTo(next);
+}
+
+function markDone() {
+  done.add(current);
+  document.getElementById('navBtn' + current).classList.add('done');
+  const btn = document.getElementById('btnDone');
+  btn.classList.add('done');
+  btn.textContent = '✓ Fait !';
+  updateProgress();
+}
+
+function updateUI() {
+  document.getElementById('btnPrev').disabled = current === 0;
+  document.getElementById('btnNext').disabled = current === steps.length - 1;
+  const dBtn = document.getElementById('btnDone');
+  if (done.has(current)) { dBtn.classList.add('done'); dBtn.textContent = '✓ Fait !'; }
+  else { dBtn.classList.remove('done'); dBtn.textContent = 'Marquer comme fait'; }
+  updateProgress();
+}
+
+function updateProgress() {
+  const pct = Math.round(((current + 1) / steps.length) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = (current + 1) + ' / ' + steps.length;
+}
+
+function toggleSection(header) {
+  header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open');
+}
+
+function copyCode(btn) {
+  const text = btn.closest('.code-block').querySelector('pre').innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'copié !'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copier'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+init();
+</script>
+</body>
+</html>
