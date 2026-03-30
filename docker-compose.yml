@@ -1,0 +1,29 @@
+services:
+  php:
+    build: .
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./symfony:/app
+    env_file:
+      - ./symfony/.env.local
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    env_file:
+      - .env.compose
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      retries: 5
+
+volumes:
+  db_data:
