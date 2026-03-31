@@ -1,9 +1,11 @@
+name: symfony-dev
+
 services:
   php:
     build: .
     ports:
-      - "8080:80"
-      - "8443:443"
+      - "${PHP_HTTP_PORT:-8080}:80"
+      - "${PHP_HTTPS_PORT:-8443}:443"
     volumes:
       - ./symfony:/app
     env_file:
@@ -15,7 +17,7 @@ services:
   db:
     image: mysql:8.0
     ports:
-      - "3306:3306"
+      - "${MYSQL_HOST_PORT:-3306}:3306"
     env_file:
       - .env.compose
     volumes:

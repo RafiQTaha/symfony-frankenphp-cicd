@@ -1,4 +1,4 @@
-.env.compose
+.env
 symfony/.env.local
 symfony/vendor/
 symfony/var/
