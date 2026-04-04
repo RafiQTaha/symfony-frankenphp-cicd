@@ -47,6 +47,7 @@ jobs:
           if ! docker compose exec -T php composer install --no-dev --optimize-autoloader; then
             echo "ERREUR composer install - rollback..."
             git reset --hard $PREVIOUS_COMMIT
+            docker compose restart php
             exit 1
           fi
 
@@ -54,6 +55,7 @@ jobs:
             echo "ERREUR migrations - rollback..."
             git reset --hard $PREVIOUS_COMMIT
             docker compose exec -T php composer install --no-dev --optimize-autoloader
+            docker compose restart php
             exit 1
           fi
 
@@ -61,7 +63,9 @@ jobs:
             echo "ERREUR cache:warmup - rollback..."
             git reset --hard $PREVIOUS_COMMIT
             docker compose exec -T php composer install --no-dev --optimize-autoloader
+            docker compose restart php
             exit 1
           fi
 
+          docker compose restart php
           echo "Deploy termine avec succes !"
