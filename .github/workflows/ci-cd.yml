@@ -35,6 +35,14 @@ jobs:
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
 
     steps:
+      - name: Setup JWT keys
+        run: |
+          mkdir -p ${{ secrets.DEPLOY_PATH }}/symfony/config/jwt
+          echo "${{ secrets.JWT_PRIVATE_KEY }}" > ${{ secrets.DEPLOY_PATH }}/symfony/config/jwt/private.pem
+          echo "${{ secrets.JWT_PUBLIC_KEY }}" > ${{ secrets.DEPLOY_PATH }}/symfony/config/jwt/public.pem
+          chmod 600 ${{ secrets.DEPLOY_PATH }}/symfony/config/jwt/private.pem
+          chmod 644 ${{ secrets.DEPLOY_PATH }}/symfony/config/jwt/public.pem
+
       - name: Deploy to production
         run: |
           cd ${{ secrets.DEPLOY_PATH }}
