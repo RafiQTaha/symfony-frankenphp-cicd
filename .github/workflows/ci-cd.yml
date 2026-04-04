@@ -43,23 +43,23 @@ jobs:
 
           git pull origin master
 
-          if ! docker compose -f docker-compose.prod.yml --env-file .env.compose exec -T php composer install --no-dev --optimize-autoloader; then
+          if ! docker compose -f docker-compose.prod.yml exec -T php composer install --no-dev --optimize-autoloader; then
             echo "ERREUR composer install - rollback..."
             git reset --hard $PREVIOUS_COMMIT
             exit 1
           fi
 
-          if ! docker compose -f docker-compose.prod.yml --env-file .env.compose exec -T php php bin/console doctrine:migrations:migrate --no-interaction; then
+          if ! docker compose -f docker-compose.prod.yml exec -T php php bin/console doctrine:migrations:migrate --no-interaction; then
             echo "ERREUR migrations - rollback..."
             git reset --hard $PREVIOUS_COMMIT
-            docker compose -f docker-compose.prod.yml --env-file .env.compose exec -T php composer install --no-dev --optimize-autoloader
+            docker compose -f docker-compose.prod.yml exec -T php composer install --no-dev --optimize-autoloader
             exit 1
           fi
 
-          if ! docker compose -f docker-compose.prod.yml --env-file .env.compose exec -T php php bin/console cache:warmup; then
+          if ! docker compose -f docker-compose.prod.yml exec -T php php bin/console cache:warmup; then
             echo "ERREUR cache:warmup - rollback..."
             git reset --hard $PREVIOUS_COMMIT
-            docker compose -f docker-compose.prod.yml --env-file .env.compose exec -T php composer install --no-dev --optimize-autoloader
+            docker compose -f docker-compose.prod.yml exec -T php composer install --no-dev --optimize-autoloader
             exit 1
           fi
 
