@@ -6,6 +6,7 @@ use App\Repository\ArticleRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ArticleRepository::class)]
 class Article
@@ -18,10 +19,22 @@ class Article
 
     #[ORM\Column(length: 255)]
     #[Groups(['article:read', 'article:write'])]
+    #[Assert\NotBlank(message: 'Le titre ne peut pas être vide')]
+    #[Assert\Length(
+        min: 3,
+        max: 255,
+        minMessage: 'Le titre doit contenir au moins {{ limit }} caractères',
+        maxMessage: 'Le titre ne peut pas dépasser {{ limit }} caractères'
+    )]
     private ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT)]
     #[Groups(['article:read', 'article:write'])]
+    #[Assert\NotBlank(message: 'Le contenu ne peut pas être vide')]
+    #[Assert\Length(
+        min: 10,
+        minMessage: 'Le contenu doit contenir au moins {{ limit }} caractères'
+    )]
     private ?string $content = null;
 
     #[ORM\Column]
