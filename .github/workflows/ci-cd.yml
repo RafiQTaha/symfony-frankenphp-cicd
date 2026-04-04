@@ -44,9 +44,13 @@ jobs:
           git fetch origin master
           git reset --hard origin/master
 
+          echo "Suppression du cache..."
+          rm -rf symfony/var/cache/*
+
           if ! docker compose exec -T php composer install --no-dev --optimize-autoloader --no-scripts; then
             echo "ERREUR composer install - rollback..."
             git reset --hard $PREVIOUS_COMMIT
+            rm -rf symfony/var/cache/*
             docker compose restart php
             exit 1
           fi
@@ -54,7 +58,7 @@ jobs:
           if ! docker compose exec -T php php bin/console cache:clear; then
             echo "ERREUR cache:clear - rollback..."
             git reset --hard $PREVIOUS_COMMIT
-            docker compose exec -T php composer install --no-dev --optimize-autoloader --no-scripts
+            rm -rf symfony/var/cache/*
             docker compose restart php
             exit 1
           fi
@@ -62,7 +66,7 @@ jobs:
           if ! docker compose exec -T php php bin/console doctrine:migrations:migrate --no-interaction; then
             echo "ERREUR migrations - rollback..."
             git reset --hard $PREVIOUS_COMMIT
-            docker compose exec -T php composer install --no-dev --optimize-autoloader --no-scripts
+            rm -rf symfony/var/cache/*
             docker compose restart php
             exit 1
           fi
@@ -70,7 +74,7 @@ jobs:
           if ! docker compose exec -T php php bin/console cache:warmup; then
             echo "ERREUR cache:warmup - rollback..."
             git reset --hard $PREVIOUS_COMMIT
-            docker compose exec -T php composer install --no-dev --optimize-autoloader --no-scripts
+            rm -rf symfony/var/cache/*
             docker compose restart php
             exit 1
           fi
