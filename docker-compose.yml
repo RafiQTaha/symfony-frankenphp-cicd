@@ -19,7 +19,7 @@ services:
     ports:
       - "${MYSQL_HOST_PORT:-3306}:3306"
     env_file:
-      - .env.compose
+      - .env
     volumes:
       - db_data:/var/lib/mysql
     healthcheck:
